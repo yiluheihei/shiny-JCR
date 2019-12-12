@@ -5,7 +5,7 @@ library(purrr)
 library(shinyWidgets)
 library(readxl)
 
-ui <- fluidPage(
+ui <- navbarPage(
   # shinyFeedback::useShinyFeedback(),
   # 设置validation error字体为红色
   tags$head(
@@ -13,11 +13,22 @@ ui <- fluidPage(
       .shiny-output-error-validation {
         color: red;
       }
+      
+      .navbar {display: flex} 
+      .navbar-nav {font-size:2rem}
+      .navbar-nav>.active>a {background-color: transparent !important}
+      
     "))
   ),
   
-  numericRangeInput('start_end', '请选择起止年份', value = c(2010, 2018)),
-  dataTableOutput("jcr_table")
+  tabPanel("影响因子查询",
+    fluidRow(
+      column(2, numericRangeInput('start_end', '时间', 
+        value = c(2010, 2018), separator = "至"
+      )),
+      column(10, dataTableOutput("jcr_table"))
+    )
+  )
 )
 
 server <- function(input, output, session) {
