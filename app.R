@@ -6,6 +6,16 @@ library(shinyWidgets)
 library(readxl)
 
 ui <- fluidPage(
+  # shinyFeedback::useShinyFeedback(),
+  # 设置validation error字体为红色
+  tags$head(
+    tags$style(HTML("
+      .shiny-output-error-validation {
+        color: red;
+      }
+    "))
+  ),
+  
   numericRangeInput('start_end', '请选择起止年份', value = c(2010, 2018)),
   dataTableOutput("jcr_table")
 )
@@ -30,14 +40,27 @@ server <- function(input, output, session) {
   }
   
   jcr <- reactive({
+    
+    # 添加时间验证
+    validate(
+      need(min(input$start_end) > 2009, "仅支持2010至2018影响因子查询"),
+      need(max(input$start_end) < 2019, "仅支持2010至2018影响因子查询")
+    )
+    
+    # shinyFeedback 不起作用？
+    # cond <- min(input$start_end) <= 2009
+    # message(cond) 
+    # shinyFeedback::feedbackDanger("start_end", cond, "error")
+    # req(!cond, cancelOutput = FALSE)
+    
     purrr::map(input$start_end[2]:input$start_end[1], read_jcr) %>% 
       reduce(full_join, by = "journal") %>% 
       set_names(c("journal", input$start_end[2]:input$start_end[1]))
   })
   
   output$jcr_table <- renderDT(
-    jcr(),
-    options = list(pageLength = 50))
+    jcr(), options = list(pageLength = 50)
+  )
 }
 
 shinyApp(ui, server)
