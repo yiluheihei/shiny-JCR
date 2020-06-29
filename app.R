@@ -24,7 +24,7 @@ ui <- navbarPage(
   tabPanel("影响因子查询",
     fluidRow(
       column(2, numericRangeInput('start_end', '时间', 
-        value = c(2010, 2018), separator = "至"
+        value = c(2010, 2019), separator = "至"
       )),
       column(10, dataTableOutput("jcr_table"))
     )
@@ -54,8 +54,8 @@ server <- function(input, output, session) {
     
     # 添加时间验证
     validate(
-      need(min(input$start_end) > 2009, "仅支持2010至2018影响因子查询"),
-      need(max(input$start_end) < 2019, "仅支持2010至2018影响因子查询")
+      need(min(input$start_end) > 2009, "仅支持2010至2019影响因子查询"),
+      need(max(input$start_end) < 2020, "仅支持2010至2019影响因子查询")
     )
     
     # shinyFeedback 不起作用？
