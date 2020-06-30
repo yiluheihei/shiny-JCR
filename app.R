@@ -5,7 +5,15 @@ library(purrr)
 library(shinyWidgets)
 library(readxl)
 
+# 终止年限
+year_end <- 
+  list.files("data/", all.files = FALSE, pattern = "^\\d+") %>% 
+  tools::file_path_sans_ext() %>% 
+  as.numeric() %>% 
+  max()
+
 ui <- navbarPage(
+  
   # shinyFeedback::useShinyFeedback(),
   # 设置validation error字体为红色
   tags$head(
@@ -21,12 +29,12 @@ ui <- navbarPage(
     "))
   ),
   
-  tabPanel("影响因子查询",
+  tabPanel("2010年以来影响因子查询",
     fluidRow(
       column(2, numericRangeInput('start_end', '时间', 
-        value = c(2010, 2019), separator = "至"
+        value = c(2010, year_end), separator = "至"
       )),
-      column(10, dataTableOutput("jcr_table"))
+      column(10, DT::dataTableOutput("jcr_table"))
     )
   )
 )
@@ -50,12 +58,18 @@ server <- function(input, output, session) {
     jcr
   }
   
+  # jcr data.frame
   jcr <- reactive({
-    
     # 添加时间验证
     validate(
-      need(min(input$start_end) > 2009, "仅支持2010至2019影响因子查询"),
-      need(max(input$start_end) < 2020, "仅支持2010至2019影响因子查询")
+      need(
+        min(input$start_end) > 2009, 
+        paste0("仅支持2010至", year_end, "影响因子查询")
+      ),
+      need(
+        max(input$start_end) < year_end + 1, 
+        paste0("仅支持2010至", year_end, "影响因子查询")
+      )
     )
     
     # shinyFeedback 不起作用？
@@ -66,10 +80,11 @@ server <- function(input, output, session) {
     
     purrr::map(input$start_end[2]:input$start_end[1], read_jcr) %>% 
       reduce(full_join, by = "journal") %>% 
-      set_names(c("journal", input$start_end[2]:input$start_end[1]))
+      set_names(c("journal", input$start_end[2]:input$start_end[1])) %>% 
+      mutate(across(-journal, as.numeric))
   })
   
-  output$jcr_table <- renderDT(
+  output$jcr_table <- DT::renderDataTable(
     jcr(), options = list(pageLength = 50)
   )
 }
