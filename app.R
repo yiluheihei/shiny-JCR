@@ -3,7 +3,7 @@ library(DT)
 library(dplyr)
 library(purrr)
 library(shinyWidgets)
-library(readxl)
+# library(b)
 
 # 终止年限
 year_end <- 
@@ -12,51 +12,46 @@ year_end <-
   as.numeric() %>% 
   max()
 
-ui <- navbarPage(
-  
-  # shinyFeedback::useShinyFeedback(),
-  # 设置validation error字体为红色
-  tags$head(
-    tags$style(HTML("
+ui <- 
+  tagList(
+    
+    # shinyFeedback::useShinyFeedback(),
+    # 设置validation error字体为红色
+    tags$head(tags$style("
       .shiny-output-error-validation {
         color: red;
       }
-      
-      .navbar {display: flex} 
-      .navbar-nav {font-size:2rem}
-      .navbar-nav>.active>a {background-color: transparent !important}
-      
-    "))
-  ),
+      .navbar-nav {width: 80%;}
+      li.dropdown {float:right;}
+    ")),
+    
+    navbarPage(title = "2010年至今影响因子查询",
   
-  tabPanel("2010年以来影响因子查询",
-    fluidRow(
-      column(2, numericRangeInput('start_end', '时间', 
-        value = c(2010, year_end), separator = "至"
-      )),
-      column(10, DT::dataTableOutput("jcr_table"))
+      tabPanel("IF",
+        fluidRow(
+          column(2, numericRangeInput('start_end', '时间', 
+            value = c(2010, year_end), separator = "至")),
+          column(10, DT::dataTableOutput("jcr_table"))
+        )
+      ),
+  
+  
+      # navbarMenu不支持tabPanel列表,所以不能直接使用lapply(map)构建tabPanel列表，
+      # 使用do.call unlist the tabPanel list
+      # https://stackoverflow.com/questions/42539946/looping-to-create-tabs-in-tabsetpanel-in-shiny?answertab=active#tab-top
+      # 
+      do.call(function(...) navbarMenu(..., icon = icon("save")),
+        c(title = "下载",
+          list(tabPanel(downloadLink("all", paste0("2010~", year_end)))),
+          purrr::map(2019:2010,
+            ~ tabPanel(downloadLink(paste0("year", .x), .x))))
+      )
     )
+    
   )
-)
 
 server <- function(input, output, session) {
-  #' load journal citation reports
-  #' 
-  #' @param year integer, the JCR year to load
-  #' @return a two length data frame, contains 'Full Journal Title' and "Journal
-  #' Impact Factor'
-  read_jcr <- function(year, n_max) {
-    file <- file.path("data", paste0(year,".xlsx"))
-    var_names <- c("rank", "journal", "total_cites", "bad",
-      "impact_f", "eigenfactor_score")
-    jcr <- read_xlsx(file, skip = 3, col_names = var_names) %>%
-      distinct() %>% 
-      select(journal, impact_f) %>% 
-      slice((-n() + 1):-n()) %>% 
-      mutate(impact_f = ifelse(impact_f == "Not Available", NA, impact_f))
-    
-    jcr
-  }
+ 
   
   # jcr data.frame
   jcr <- reactive({
@@ -77,15 +72,38 @@ server <- function(input, output, session) {
     # message(cond) 
     # shinyFeedback::feedbackDanger("start_end", cond, "error")
     # req(!cond, cancelOutput = FALSE)
-    
-    purrr::map(input$start_end[2]:input$start_end[1], read_jcr) %>% 
-      reduce(full_join, by = "journal") %>% 
-      set_names(c("journal", input$start_end[2]:input$start_end[1])) %>% 
-      mutate(across(-journal, as.numeric))
+    readr::read_tsv("data/jcr.tsv")  
+   
   })
   
   output$jcr_table <- DT::renderDataTable(
     jcr(), options = list(pageLength = 50)
+  )
+  
+  # download for each year
+  purrr::map(
+    year_end:2010,
+    function(i) {
+      output[[paste0("year", i)]] <- downloadHandler(
+        filename = function() {
+          paste0(i, ".xlsx")
+        },
+        content = function(file) {
+          # 为什么paste0("data/", file)不可以
+          file.copy(paste0("data/",  paste0(i, ".xlsx")), file)
+        },
+        contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      )
+    }
+  )
+  # download all
+  output$all <- downloadHandler(
+    filename = function() {
+      paste0("2010_", year_end, ".csv")
+    },
+    content = function(file) {
+      readr::write_csv(jcr(), file)
+    }
   )
 }
 
