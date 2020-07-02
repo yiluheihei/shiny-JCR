@@ -21,13 +21,12 @@ ui <-
       .shiny-output-error-validation {
         color: red;
       }
-      .navbar-nav {width: 80%;}
-      li.dropdown {float:right;}
+      .navbar {display: flex; font-size:1.8rem}
     ")),
     
-    navbarPage(title = "2010年至今影响因子查询",
+    navbarPage(title="",
   
-      tabPanel("IF",
+      tabPanel("2010年至今影响因子查询",
         fluidRow(
           column(2, numericRangeInput('start_end', '时间', 
             value = c(2010, year_end), separator = "至")),
