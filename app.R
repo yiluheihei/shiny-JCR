@@ -71,7 +71,7 @@ server <- function(input, output, session) {
     # message(cond) 
     # shinyFeedback::feedbackDanger("start_end", cond, "error")
     # req(!cond, cancelOutput = FALSE)
-    readr::read_tsv("data/jcr.tsv")  
+    readr::read_tsv("data/if_2020_2021.tsv")  
    
   })
   
